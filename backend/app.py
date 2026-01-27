@@ -7,7 +7,10 @@ from flask_jwt_extended import (
     get_jwt_identity
 )
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Transaction
+from sqlalchemy import extract, func
+from datetime import datetime
+
+from models import db, User, Transaction, Budget
 
 app = Flask(__name__)
 CORS(app)
@@ -21,12 +24,12 @@ app.config["JWT_SECRET_KEY"] = "super-secret-key"  # change later
 db.init_app(app)
 jwt = JWTManager(app)
 
-# Home route
+# ---------------- HOME ----------------
 @app.route("/")
 def home():
     return {"status": "Finance Tracker Backend Running"}
 
-# Register route
+# ---------------- AUTH ----------------
 @app.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
@@ -45,7 +48,7 @@ def register():
 
     return jsonify({"message": "User registered successfully"}), 201
 
-# Login route
+
 @app.route("/login", methods=["POST"])
 def login():
     data = request.get_json()
@@ -61,7 +64,7 @@ def login():
     token = create_access_token(identity=user.id)
     return jsonify({"access_token": token}), 200
 
-# Add transaction (PROTECTED)
+# ---------------- TRANSACTIONS ----------------
 @app.route("/transaction", methods=["POST"])
 @jwt_required()
 def add_transaction():
@@ -86,7 +89,7 @@ def add_transaction():
 
     return jsonify({"message": "Transaction added successfully"}), 201
 
-# Get transactions (PROTECTED)
+
 @app.route("/transactions", methods=["GET"])
 @jwt_required()
 def get_transactions():
@@ -105,7 +108,81 @@ def get_transactions():
         for t in transactions
     ])
 
-# Create DB tables
+# ---------------- STATS ----------------
+@app.route("/monthly-stats", methods=["GET"])
+@jwt_required()
+def monthly_stats():
+    user_id = get_jwt_identity()
+
+    income = db.session.query(
+        extract("month", Transaction.date),
+        func.sum(Transaction.amount)
+    ).filter(
+        Transaction.user_id == user_id,
+        Transaction.type == "income"
+    ).group_by(extract("month", Transaction.date)).all()
+
+    expense = db.session.query(
+        extract("month", Transaction.date),
+        func.sum(Transaction.amount)
+    ).filter(
+        Transaction.user_id == user_id,
+        Transaction.type == "expense"
+    ).group_by(extract("month", Transaction.date)).all()
+
+    return jsonify({
+        "income": [[int(m), float(t)] for m, t in income],
+        "expense": [[int(m), float(t)] for m, t in expense]
+    })
+
+# ---------------- BUDGET ----------------
+@app.route("/budget", methods=["POST"])
+@jwt_required()
+def set_budget():
+    user_id = get_jwt_identity()
+    data = request.get_json()
+
+    if not data or not data.get("limit"):
+        return jsonify({"error": "Budget limit required"}), 400
+
+    budget = Budget.query.filter_by(user_id=user_id).first()
+
+    if budget:
+        budget.limit = data["limit"]
+    else:
+        budget = Budget(limit=data["limit"], user_id=user_id)
+        db.session.add(budget)
+
+    db.session.commit()
+    return jsonify({"message": "Budget saved"}), 200
+
+
+@app.route("/budget-alert", methods=["GET"])
+@jwt_required()
+def budget_alert():
+    user_id = get_jwt_identity()
+    current_month = datetime.utcnow().month
+
+    spent = db.session.query(
+        func.sum(Transaction.amount)
+    ).filter(
+        Transaction.user_id == user_id,
+        Transaction.type == "expense",
+        extract("month", Transaction.date) == current_month
+    ).scalar() or 0
+
+    budget = Budget.query.filter_by(user_id=user_id).first()
+
+    if budget and spent > budget.limit:
+        return jsonify({
+            "alert": True,
+            "spent": spent,
+            "limit": budget.limit
+        })
+
+    return jsonify({"alert": False})
+
+# ---------------- INIT ----------------
 with app.app_context():
     db.create_all()
     print("✅ Database tables created")
