@@ -40,25 +40,3 @@ Database: SQLite
 
 Charts: Chart.js
 
-Project Structure :
-
-finance-tracker-fullstack/
-│
-├── backend/
-│   ├── app.py
-│   ├── models.py
-│   ├── requirements.txt
-│   └── finance.db
-│
-└── frontend/
-    ├── index.html
-    ├── package.json
-    └── src/
-        ├── main.jsx
-        ├── App.jsx
-        ├── api.js
-        └── components/
-            ├── Login.jsx
-            ├── Register.jsx
-            ├── Dashboard.jsx
-            └── MonthlyChart.jsx
