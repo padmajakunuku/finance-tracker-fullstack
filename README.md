@@ -4,31 +4,31 @@ A full-stack finance tracker web application that helps users manage their incom
 
 🔐 User Authentication
 
-User registration & login
+             User registration & login
 
-Secure password hashing
+             Secure password hashing
 
-JWT-based authentication
+             JWT-based authentication
 
 💸 Expense & Income Management
 
-Add income and expense transactions
+             Add income and expense transactions
 
-Categorize transactions
+             Categorize transactions
 
-View all transaction history
+             View all transaction history
 
 📊 Monthly Statistics
 
-Monthly income vs expense chart
+        Monthly income vs expense chart
 
-Backend-driven analytics API
+        Backend-driven analytics API
 
 🚨 Budget Alerts
 
-Set monthly budget limits
+       Set monthly budget limits
 
-Get alerts when expenses exceed budget
+       Get alerts when expenses exceed budget
 
 🧱 Full Stack Architecture
 
